@@ -77,16 +77,27 @@ async function initDb() {
   `;
   await pool.query(sql);
 
-  const count = await pool.query('SELECT COUNT(*)::int AS count FROM users');
-  if (count.rows[0].count === 0) {
-    const email = process.env.ADMIN_EMAIL || 'admin@example.com';
-    const password = process.env.ADMIN_PASSWORD || 'ChangeThisPassword123!';
-    const hash = await bcrypt.hash(password, 12);
+  const configuredEmail = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const configuredPassword = String(process.env.ADMIN_PASSWORD || '');
+  if (configuredEmail || configuredPassword) {
+    if (!configuredEmail || configuredPassword.length < 12) {
+      throw new Error('Configure both ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters.');
+    }
+    const name = String(process.env.ADMIN_NAME || 'System Administrator').trim() || 'System Administrator';
+    const hash = await bcrypt.hash(configuredPassword, 12);
     await pool.query(
-      'INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,$4)',
-      [process.env.ADMIN_NAME || 'System Administrator', email.toLowerCase(), hash, 'admin']
+      `INSERT INTO users(name,email,password_hash,role,active)
+       VALUES($1,$2,$3,'admin',TRUE)
+       ON CONFLICT (email) DO UPDATE SET
+         name=EXCLUDED.name,password_hash=EXCLUDED.password_hash,role='admin',active=TRUE`,
+      [name, configuredEmail, hash]
     );
-    console.log(`Initial administrator created: ${email}`);
+    console.log('Configured administrator credentials synchronized.');
+  } else {
+    const count = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+    if (count.rows[0].count === 0) {
+      throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD in the environment to initialize the first administrator.');
+    }
   }
 }
 

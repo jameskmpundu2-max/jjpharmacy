@@ -25,7 +25,7 @@ A runnable full-stack starter application using HTML, CSS, JavaScript, Node.js, 
 3. Set a unique `SESSION_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`.
 4. Run `npm install` and `npm start`, then open `http://localhost:3000`.
 
-All application reads and writes, including login sessions, inventory, sales, and reports, use the configured Neon database. Startup stops if `DATABASE_URL` is missing or does not point to a Neon host. The schema is created automatically, and an initial administrator is created only when Neon has no user accounts.
+All application reads and writes, including login sessions, inventory, sales, and reports, use the configured Neon database. Startup stops if `DATABASE_URL` is missing or does not point to a Neon host. The schema is created automatically. When `ADMIN_EMAIL` and `ADMIN_PASSWORD` are configured, they are synchronized to the matching administrator account at startup, so the configured credentials remain valid. Use the same variables in the hosting provider's environment settings for a deployed app; local `.env` values are not uploaded by Git.
 
 Existing records in the former local `.local-db` are not copied automatically. Keep that folder until a separate migration into Neon has been completed and verified.
 
