@@ -22,6 +22,15 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(require('node:path').join(__dirname, 'public')));
+// The Vercel Express adapter invokes `app` directly, so expose the Socket.IO
+// browser client through Express instead of relying on the separate HTTP server.
+const socketIoClientPath = require('node:path').resolve(
+  require('node:path').dirname(require.resolve('socket.io')),
+  '../client-dist/socket.io.js'
+);
+app.get('/socket.io/socket.io.js', (req, res, next) =>
+  res.sendFile(socketIoClientPath, error => error && next(error))
+);
 // Vercel invokes the exported Express app directly, so initialize Neon before
 // handling requests instead of relying on a long-running server startup hook.
 app.use((req, res, next) => dbReady.then(error => error ? next(error) : next()));
