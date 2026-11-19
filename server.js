@@ -15,12 +15,16 @@ const server = http.createServer(app);
 const io = new Server(server);
 const PORT = Number(process.env.PORT || 3000);
 const isProd = process.env.NODE_ENV === 'production';
+const dbReady = initDb().then(() => null).catch(error => error);
 
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static('public'));
+app.use(express.static(require('node:path').join(__dirname, 'public')));
+// Vercel invokes the exported Express app directly, so initialize Neon before
+// handling requests instead of relying on a long-running server startup hook.
+app.use((req, res, next) => dbReady.then(error => error ? next(error) : next()));
 
 const sessionMiddleware = session({
   store: new PgSession({ pool, createTableIfMissing: true, tableName: 'user_sessions' }),
@@ -365,9 +369,14 @@ app.use('/api', (err,req,res,next)=>{
 });
 app.get('*',(req,res)=>res.sendFile(require('path').join(__dirname,'public','index.html')));
 
-(async()=>{
-  try{
-    await initDb();
-    server.listen(PORT,()=>console.log(`PharmaTrack running on http://localhost:${PORT}`));
-  }catch(e){console.error('Startup failed:',e);process.exit(1);}
-})();
+module.exports = app;
+
+if (require.main === module) {
+  dbReady.then(error => {
+    if (error) {
+      console.error('Startup failed:', error);
+      process.exit(1);
+    }
+    server.listen(PORT, () => console.log(`PharmaTrack running on http://localhost:${PORT}`));
+  });
+}
