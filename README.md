@@ -22,7 +22,7 @@ A runnable full-stack starter application using HTML, CSS, JavaScript, Node.js, 
 
 1. Copy `.env.example` to `.env`.
 2. In the Neon Console, create or select a project and copy its pooled connection string. Put it in `DATABASE_URL` in `.env`. Keep this secret out of source control.
-3. Set a unique `SESSION_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`.
+3. Set `BRANCH_ID=main`, a unique `SESSION_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`.
 4. Run `npm install` and `npm start`, then open `http://localhost:3000`.
 
 All application reads and writes, including login sessions, inventory, sales, and reports, use the configured Neon database. Startup stops if `DATABASE_URL` is missing or does not point to a Neon host. The schema is created automatically. When `ADMIN_EMAIL` and `ADMIN_PASSWORD` are configured, they are synchronized to the matching administrator account at startup, so the configured credentials remain valid. Use the same variables in the hosting provider's environment settings for a deployed app; local `.env` values are not uploaded by Git.
@@ -31,7 +31,7 @@ Existing records in the former local `.local-db` are not copied automatically. K
 
 ### Branches
 
-Deploy each pharmacy branch as a separate application with its own Neon database, `DATABASE_URL`, `SESSION_SECRET`, administrator credentials, and pharmacy details. Configure cross-branch read-only stock lookup with a shared `BRANCH_NETWORK_TOKEN` and a `BRANCH_DIRECTORY` JSON array of other deployed branches, for example `[ {"name":"Ndola","url":"https://ndola.example.com"} ]`. Branch creation inside the app is disabled because Neon project and database provisioning is not configured here.
+Deploy each pharmacy branch as a separate application using the same Neon `DATABASE_URL`. Give each deployment a unique `BRANCH_ID` containing lowercase letters and numbers (for example `main`, `ndola`, or `kitwe`). The default `main` branch continues using the existing `public` schema; every other branch gets its own schema in the same database, so users, inventory, sales, purchases, suppliers and sessions stay separate. Each schema is initialized automatically. Set `PHARMACY_NAME`, branch administrator credentials, `SESSION_SECRET`, and other pharmacy details for each deployment. To show other branch sites and enable read-only stock lookup, configure a shared `BRANCH_NETWORK_TOKEN` and a `BRANCH_DIRECTORY` JSON array of deployed branches, for example `[ {"name":"Ndola","url":"https://ndola.example.com"} ]`. Branch deployment and `BRANCH_ID` configuration are done in the hosting provider; the in-app branch form cannot provision deployments.
 
 ## Real-time stock behaviour
 A sale/purchase/adjustment updates PostgreSQL inside a transaction. After commit, the server emits a Socket.IO event. Connected browser sessions refresh the affected inventory and dashboard. PostgreSQL is the source of truth; browser state is not used as the stock ledger.

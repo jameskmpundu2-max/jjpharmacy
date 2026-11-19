@@ -10,10 +10,21 @@ catch { throw new Error('DATABASE_URL must be a valid Neon PostgreSQL connection
 if (!databaseHost.toLowerCase().endsWith('.neon.tech'))
   throw new Error('DATABASE_URL must point to a Neon database host ending in .neon.tech.');
 
-const pool = new Pool({ connectionString: databaseUrl, max: Number(process.env.PG_POOL_MAX || 5) });
+const branchId = String(process.env.BRANCH_ID || 'main').trim().toLowerCase();
+if (!/^[a-z][a-z0-9]{0,30}$/.test(branchId))
+  throw new Error('BRANCH_ID must start with a letter and contain only lowercase letters and numbers (up to 31 characters).');
+// Keep the existing installation in public for the default branch; each other
+// branch gets an isolated schema while using the same Neon database URL.
+const schemaName = branchId === 'main' ? 'public' : `branch_${branchId}`;
+const pool = new Pool({
+  connectionString: databaseUrl,
+  options: `-c search_path=${schemaName}`,
+  max: Number(process.env.PG_POOL_MAX || 5)
+});
 pool.on('error', error => console.error('Unexpected idle Neon database connection error:', error.message));
 
 async function initDb() {
+  await pool.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
   const sql = `
   CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
@@ -101,4 +112,4 @@ async function initDb() {
   }
 }
 
-module.exports = { pool, initDb };
+module.exports = { pool, initDb, branchId, schemaName };

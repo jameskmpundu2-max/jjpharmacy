@@ -143,7 +143,7 @@ app.get('/api/internal/branch-stock', asyncRoute(async (req,res) => {
 app.get('/api/branches', isAdmin, (req,res) => {
   res.json({ enabled: false, branches: branchPeers().map((branch,index) => ({ id:String(index+1), name:branch.name, url:branch.url, databaseReady:true })) });
 });
-app.post('/api/branches', isAdmin, (req,res) => res.status(501).json({ error: 'Automatic branch creation is not configured. Deploy each branch with its own Neon connection and add it to BRANCH_DIRECTORY.' }));
+app.post('/api/branches', isAdmin, (req,res) => res.status(501).json({ error: 'Branch deployments use the shared Neon database with a unique BRANCH_ID. Configure each deployment and add its URL to BRANCH_DIRECTORY.' }));
 app.get('/api/branch-availability', auth, asyncRoute(async (req,res) => {
   const term = clean(req.query.q).slice(0, 100);
   if (term.length < 2) return res.status(400).json({ error: 'Enter at least two characters to search other branches.' });
