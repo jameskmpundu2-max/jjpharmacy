@@ -16,10 +16,18 @@ if (!/^[a-z][a-z0-9]{0,30}$/.test(branchId))
 // Keep the existing installation in public for the default branch; each other
 // branch gets an isolated schema while using the same Neon database URL.
 const schemaName = branchId === 'main' ? 'public' : `branch_${branchId}`;
+let poolConnectionString = databaseUrl;
+if (branchId !== 'main') {
+  const branchUrl = new URL(databaseUrl);
+  // Neon transaction poolers reject search_path in startup options. Derive
+  // the direct endpoint for isolated schemas while keeping the same database.
+  branchUrl.hostname = branchUrl.hostname.replace(/-pooler(?=\.)/i, '');
+  poolConnectionString = branchUrl.toString();
+}
 const pool = new Pool({
-  connectionString: databaseUrl,
-  options: `-c search_path=${schemaName}`,
-  max: Number(process.env.PG_POOL_MAX || 5)
+  connectionString: poolConnectionString,
+  ...(branchId === 'main' ? {} : { options: `-c search_path=${schemaName}` }),
+  max: Number(process.env.PG_POOL_MAX || (branchId === 'main' ? 5 : 1))
 });
 pool.on('error', error => console.error('Unexpected idle Neon database connection error:', error.message));
 
