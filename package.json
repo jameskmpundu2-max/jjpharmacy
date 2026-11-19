@@ -1,0 +1,30 @@
+{
+  "name": "pharmatrack-pharmacy-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-user pharmacy inventory, sales, purchasing and supplier management system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node start-local.js",
+    "start:branch": "node start-local.js",
+    "start:postgres": "node server.js",
+    "dev": "node start-local.js --watch"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^10.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "pg": "^8.13.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite-socket": "^0.2.19"
+  }
+}

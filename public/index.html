@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>J&amp;J Pharmacy</title><link rel="icon" type="image/png" sizes="any" href="/jj-logo.png?v=1"><link rel="apple-touch-icon" href="/jj-logo.png"><meta name="theme-color" content="#123b3a"><link rel="stylesheet" href="styles.css"></head>
+<body>
+<div id="login-screen" class="login-wrap"><form id="login-form" class="login-card">
+  <img class="logo login-logo" src="/jj-logo.png" alt="J&amp;J Pharmacy logo"><h1>J&amp;J Pharmacy</h1><p>Sign in to your pharmacy workspace</p>
+  <label>Email address<input id="login-email" type="email" required autocomplete="username" placeholder="name@pharmacy.com"></label>
+  <label>Password<input id="login-password" type="password" required autocomplete="current-password" placeholder="Your password"></label>
+  <button class="btn primary full">Sign in</button><div id="login-error" class="error"></div>
+</form></div>
+<div id="app" class="app hidden">
+<aside class="sidebar" id="sidebar"><div class="sidebar-head"><img class="sidebar-logo" src="/jj-logo.png" alt="J&amp;J Pharmacy logo"><button id="menu-toggle" class="menu-toggle" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="navigation"><span></span><span></span><span></span></button></div><div class="brand"><div><b>J&amp;J Pharmacy</b><small>PharmaTrack</small></div></div>
+<nav id="navigation">
+<button data-page="dashboard" class="nav">Dashboard</button>
+<button data-page="inventory" class="nav">Inventory</button>
+<button data-page="sales" class="nav">New sale</button>
+<button data-page="purchases" class="nav admin-only">Purchases</button>
+<button data-page="suppliers" class="nav admin-only">Suppliers</button>
+<button data-page="movements" class="nav admin-only">Stock history</button>
+<button data-page="reports" class="nav admin-only">Reports</button>
+<button data-page="users" class="nav admin-only">User accounts</button>
+<button data-page="branches" class="nav admin-only">Branches</button>
+</nav><div class="side-bottom"><span class="live-dot"></span> Live stock synchronization</div></aside>
+<main class="main"><header class="topbar"><div><small>PHARMACY MANAGEMENT</small><h2 id="page-title">Welcome</h2></div>
+<div class="user-area"><span id="connection-state" class="connection">Connecting</span><div><b id="user-name">User</b><small id="user-role">Role</small></div><button id="logout" class="btn light">Log out</button></div></header>
+<div id="notice" class="notice hidden"></div>
+<section id="page-welcome" class="page welcome-page"><div class="welcome-card"><img class="welcome-logo" src="/jj-logo.png" alt="J&amp;J Pharmacy logo"><span class="welcome-kicker">J&amp;J PHARMACY</span><h1 id="welcome-greeting">Welcome</h1><p>Your pharmacy workspace is ready. Open the navigation menu to choose a page.</p></div></section>
+<section id="page-dashboard" class="page hidden">
+<h3 class="section-title">Sales value</h3>
+<div class="stats sales-periods">
+<article class="stat sales-stat"><small>Today</small><strong id="d-sales-day">ZMW 0.00</strong><span id="d-sales-day-count">0 transactions</span></article>
+<article class="stat sales-stat"><small>This week</small><strong id="d-sales-week">ZMW 0.00</strong><span id="d-sales-week-count">0 transactions</span></article>
+<article class="stat sales-stat"><small>This month</small><strong id="d-sales-month">ZMW 0.00</strong><span id="d-sales-month-count">0 transactions</span></article>
+</div>
+<div class="stats operational">
+<article class="stat"><small>Products</small><strong id="d-products">0</strong><span>Active medicines</span></article>
+<article class="stat"><small>Units in stock</small><strong id="d-units">0</strong><span>Current quantity</span></article>
+<article class="stat"><small>Low stock</small><strong id="d-low">0</strong><span>At reorder level or below</span></article>
+<article class="stat"><small>Expiring soon</small><strong id="d-expiring">0</strong><span>Within 30 days</span></article>
+</div>
+<div class="panel stock-alert-panel"><div class="panel-head"><div><h3>Restock alerts</h3><p>Medicines at or below their reorder level</p></div><button class="btn light" data-page="inventory">Review inventory</button></div><div id="low-stock-list" class="low-stock-list"><p class="muted">Loading stock levels…</p></div></div>
+<div class="panel"><div class="panel-head"><div><h3>Recent stock activity</h3><p>Latest stock movements across the pharmacy</p></div><button class="btn light admin-only" data-page="movements">View history</button></div>
+<div class="table-wrap"><table><thead><tr><th>Date</th><th>Medicine</th><th>Movement</th><th>Change</th><th>Balance</th><th>Reference</th></tr></thead><tbody id="dashboard-movements"></tbody></table></div></div>
+</section>
+<section id="page-inventory" class="page hidden">
+<div class="toolbar inventory-toolbar"><input id="product-search" placeholder="Search this branch..."><form id="branch-stock-search" class="branch-search"><input id="branch-stock-term" placeholder="Medicine at other branches" aria-label="Medicine to search at other branches"><button class="btn light">Find across branches</button></form><button class="btn primary admin-only" id="add-product">Add medicine</button></div>
+<div class="panel"><div class="table-wrap"><table><thead><tr><th>Medicine</th><th>SKU / Batch</th><th>Expiry</th><th>Cost</th><th>Selling price</th><th>Quantity</th><th>Status</th><th>Other branches</th><th class="admin-only">Actions</th></tr></thead><tbody id="products-table"></tbody></table></div></div>
+</section>
+<section id="page-sales" class="page hidden">
+<div class="two-col"><div class="panel"><h3>New sale</h3><p>Add one or more medicines to the transaction.</p>
+<form id="sale-form" class="stack"><label>Medicine<select id="sale-product" required></select></label><div class="form-row"><label>Quantity<input id="sale-qty" type="number" min="1" step="1" value="1" required></label><button type="button" id="add-sale-item" class="btn light align-end">Add item</button></div>
+<div id="sale-available" class="muted"></div><div id="cart-items"></div>
+<div class="form-row"><label>Discount (ZMW)<input id="sale-discount" type="number" min="0" step=".01" value="0"></label><label>Payment method<select id="payment-method"><option>Cash</option><option>Mobile Money</option><option>Card</option><option>Bank Transfer</option></select></label></div>
+<div class="form-row"><label>Amount paid (ZMW)<input id="sale-amount-paid" type="number" min="0" step=".01" value="0" required></label><div id="sale-change-wrap" class="total-line change-line"><b>Change due</b><b id="sale-change">ZMW 0.00</b></div></div>
+<div class="total-line"><b>Subtotal</b><b id="cart-subtotal">ZMW 0.00</b></div><div class="total-line"><b>Total</b><strong id="cart-total">ZMW 0.00</strong></div>
+<button id="complete-sale" class="btn primary full">Complete Sale and Print Receipt</button></form></div>
+<div class="panel"><h3>Checkout guidance</h3><ul class="help-list"><li>Available stock is checked again when the sale is saved.</li><li>Stock is deducted in a single database transaction.</li><li>A receipt number is generated for every completed sale.</li><li>Other connected users receive the stock update immediately.</li></ul></div></div>
+</section>
+<section id="page-purchases" class="page hidden">
+<div class="panel"><h3>Record a purchase / stock delivery</h3><p>Receiving a purchase increases stock quantities automatically.</p>
+<form id="purchase-form" class="stack"><div class="form-row"><label>Supplier<select id="purchase-supplier"><option value="">No supplier selected</option></select></label><label>Supplier invoice / reference<input id="purchase-invoice"></label></div>
+<div class="form-row"><label>Medicine<select id="purchase-product"></select></label><label>Quantity received<input id="purchase-qty" type="number" min="1" value="1"></label></div>
+<div class="form-row"><label>Unit cost (ZMW)<input id="purchase-cost" type="number" min="0" step=".01"></label><button type="button" class="btn light align-end" id="add-purchase-item">Add purchase item</button></div>
+<div id="purchase-cart"></div><label>Notes<input id="purchase-notes" placeholder="Optional notes"></label><button class="btn primary">Save purchase and update stock</button></form></div>
+<div class="panel"><h3>Recent purchases</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Supplier</th><th>Invoice</th><th>Total</th></tr></thead><tbody id="purchases-table"></tbody></table></div></div>
+</section>
+<section id="page-suppliers" class="page hidden"><div class="toolbar"><h3>Suppliers</h3><button class="btn primary" id="add-supplier">Add supplier</button></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Supplier</th><th>Contact person</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead><tbody id="suppliers-table"></tbody></table></div></div></section>
+<section id="page-movements" class="page hidden"><div class="panel"><h3>Stock movement history</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Medicine</th><th>Type</th><th>Change</th><th>Balance</th><th>User</th><th>Reference</th></tr></thead><tbody id="movements-table"></tbody></table></div></div></section>
+<section id="page-reports" class="page hidden"><div class="stats"><article class="stat"><small>Sales transactions (30 days)</small><strong id="r-sales">0</strong></article><article class="stat"><small>Sales value (30 days)</small><strong id="r-sales-value">ZMW 0.00</strong></article><article class="stat"><small>Purchase value (30 days)</small><strong id="r-purchase-value">ZMW 0.00</strong></article></div><div class="panel"><h3>Top selling medicines</h3><div class="table-wrap"><table><thead><tr><th>Medicine</th><th>Units sold</th><th>Revenue</th></tr></thead><tbody id="top-products"></tbody></table></div></div></section>
+<section id="page-users" class="page hidden"><div class="toolbar"><h3>User accounts</h3><button class="btn primary" id="add-user">Create account</button></div><div class="panel"><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody id="users-table"></tbody></table></div></div></section>
+<section id="page-branches" class="page hidden">
+<div class="panel branch-intro"><h3>Independent pharmacy branches</h3><p>Each branch gets its own site, database, users, inventory, sales, suppliers and reports.</p></div>
+<form id="branch-form" class="panel stack branch-form"><label>Branch name<input id="branch-name" required maxlength="60" placeholder="e.g. Ndola Central"></label><button id="create-branch" class="btn primary">Create branch</button><p id="branch-setup-message" class="muted"></p></form>
+<div id="branch-credentials" class="panel branch-credentials hidden"><h3>Branch is ready</h3><p>Save these initial administrator credentials now, then change the password after signing in.</p><div><b>Site</b><a id="created-branch-url" target="_blank" rel="noopener"></a></div><div><b>Admin email</b><span id="created-branch-email"></span></div><div><b>Temporary password</b><code id="created-branch-password"></code></div></div>
+<div class="panel"><div class="panel-head"><div><h3>Branches on this local host</h3><p>Every branch opens as a separate site.</p></div></div><div class="table-wrap"><table><thead><tr><th>Branch</th><th>Site</th><th>Records</th></tr></thead><tbody id="branches-table"></tbody></table></div></div>
+</section>
+</main></div>
+<dialog id="modal"><form id="modal-form" class="stack"><div class="modal-head"><h3 id="modal-title">Add record</h3><button type="button" id="modal-close" class="btn light">Close</button></div><div id="modal-fields"></div><button class="btn primary full">Save</button></form></dialog>
+<dialog id="branch-availability-dialog"><div class="modal-head"><h3 id="branch-availability-title">Medicine availability</h3><button type="button" id="branch-availability-close" class="btn light">Close</button></div><div id="branch-availability-results" class="branch-results"></div></dialog>
+<div id="receipt-root"></div><script src="/socket.io/socket.io.js"></script><script src="app.js"></script></body></html>
