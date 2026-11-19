@@ -5,15 +5,15 @@
   "description": "Multi-user pharmacy inventory, sales, purchasing and supplier management system",
   "main": "server.js",
   "scripts": {
-    "start": "node start-local.js",
-    "start:branch": "node start-local.js",
+    "start": "node server.js",
     "start:postgres": "node server.js",
-    "dev": "node start-local.js --watch"
+    "dev": "node --watch server.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.1",
     "bcryptjs": "^2.4.3",
     "connect-pg-simple": "^10.0.0",
     "dotenv": "^16.4.5",
@@ -22,9 +22,7 @@
     "express-session": "^1.18.1",
     "helmet": "^8.0.0",
     "pg": "^8.13.1",
-    "socket.io": "^4.8.1"
-  },
-  "devDependencies": {
-    "@electric-sql/pglite-socket": "^0.2.19"
+    "socket.io": "^4.8.1",
+    "ws": "^8.23.0"
   }
 }

@@ -18,44 +18,20 @@ A runnable full-stack starter application using HTML, CSS, JavaScript, Node.js, 
 - Node.js 20+
 - A modern browser
 
-## Local setup
-1. In a terminal in this project folder run:
+## Run with Neon
 
-   ```bash
-   npm install
-   npm start
-   ```
+1. Copy `.env.example` to `.env`.
+2. In the Neon Console, create or select a project and copy its pooled connection string. Put it in `DATABASE_URL` in `.env`. Keep this secret out of source control.
+3. Set a unique `SESSION_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env`.
+4. Run `npm install` and `npm start`, then open `http://localhost:3000`.
 
-2. Open `http://localhost:3000`.
-3. Sign in with `admin@example.com` and `ChangeThisPassword123!` on the first run.
-4. Change the administrator password before using the app with real data.
-5. Create cashier accounts from **User accounts**.
+All application reads and writes, including login sessions, inventory, sales, and reports, use the configured Neon database. Startup stops if `DATABASE_URL` is missing or does not point to a Neon host. The schema is created automatically, and an initial administrator is created only when Neon has no user accounts.
 
-Local start runs an embedded PostgreSQL-compatible database and stores its data in `.local-db`. The database and schema are created automatically. The first administrator is created only when the users table is empty. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, and other app settings in `.env` if needed; no `DATABASE_URL` is required for local start.
+Existing records in the former local `.local-db` are not copied automatically. Keep that folder until a separate migration into Neon has been completed and verified.
 
-### Run another branch locally
+### Branches
 
-Administrators can open **Branches** in the app and create a branch by name. The new site gets its own login, session secret, and database. The setup page shows the new URL and initial admin credentials once. Branch sites are added automatically to cross-branch stock lookup.
-
-You can also start a branch from a terminal using a unique name and app port:
-
-```bash
-npm run start:branch -- --branch=ndola --port=3001
-```
-
-Open `http://localhost:3001`. On first start, the launcher creates `.branches/ndola/.env` and `.branches/ndola/database`, generates a separate administrator password, and prints that password once. Save it, then change it before using the account. Branch files and records remain separate from the main pharmacy and other branches. Use a different port for each running local branch.
-
-### Host branches separately
-
-Deploy the same app separately for each branch and assign each deployment its own PostgreSQL database and environment settings. Give each branch a unique `DATABASE_URL`, `SESSION_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`; set its own `PHARMACY_NAME`, address, and phone. Run `npm run start:postgres` for each hosted deployment. This keeps inventory, purchases, sales, suppliers, accounts, and reports isolated while preserving all system features at each site.
-
-The in-app branch creator provisions independent instances on this local host. Hosted branch creation requires deploying a new app and database for the branch; this project is not connected to a hosting provider API.
-
-To enable read-only stock lookup between hosted branches, set the same random `BRANCH_NETWORK_TOKEN` (at least 32 characters) on every site. Configure `BRANCH_DIRECTORY` on each site as a JSON array listing the *other* branches, for example `[{"name":"Ndola","url":"https://ndola.example.com"}]`. Keep branch sites on HTTPS and use a long, private token. Staff can use **Check branches** in Inventory to see matching medicines and available quantities; this lookup does not transfer or reserve stock. A branch that is offline is shown as unavailable. Leave `BRANCH_DIRECTORY=[]` to keep lookup disabled.
-
-For local instances, add the matching other-site URLs to `.env` and each `.branches/<name>/.env`. Use `http://localhost:<port>` URLs and the same `BRANCH_NETWORK_TOKEN` in every local branch. The internal stock endpoint is protected by this shared token; it returns only medicine names, SKUs, and in-stock quantities.
-
-For a regular PostgreSQL server, configure `DATABASE_URL` and run `npm run start:postgres` instead. Production deployments should use this command with a managed PostgreSQL database.
+Deploy each pharmacy branch as a separate application with its own Neon database, `DATABASE_URL`, `SESSION_SECRET`, administrator credentials, and pharmacy details. Configure cross-branch read-only stock lookup with a shared `BRANCH_NETWORK_TOKEN` and a `BRANCH_DIRECTORY` JSON array of other deployed branches, for example `[ {"name":"Ndola","url":"https://ndola.example.com"} ]`. Branch creation inside the app is disabled because Neon project and database provisioning is not configured here.
 
 ## Real-time stock behaviour
 A sale/purchase/adjustment updates PostgreSQL inside a transaction. After commit, the server emits a Socket.IO event. Connected browser sessions refresh the affected inventory and dashboard. PostgreSQL is the source of truth; browser state is not used as the stock ledger.

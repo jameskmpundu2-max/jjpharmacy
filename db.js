@@ -1,15 +1,17 @@
-const { Pool } = require('pg');
+const { Pool, neonConfig } = require('@neondatabase/serverless');
+neonConfig.webSocketConstructor = require('ws');
 const bcrypt = require('bcryptjs');
 
-const localPglite = process.env.LOCAL_PGLITE === 'true';
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: localPglite ? 1 : Number(process.env.PG_POOL_MAX || 10),
-  idleTimeoutMillis: localPglite ? 0 : undefined,
-  keepAlive: localPglite,
-  ssl: process.env.DATABASE_URL && !/localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL)
-    ? { rejectUnauthorized: false } : false
-});
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error('DATABASE_URL is required. Configure a Neon PostgreSQL connection string before starting PharmaTrack.');
+let databaseHost;
+try { databaseHost = new URL(databaseUrl).hostname; }
+catch { throw new Error('DATABASE_URL must be a valid Neon PostgreSQL connection string.'); }
+if (!databaseHost.toLowerCase().endsWith('.neon.tech'))
+  throw new Error('DATABASE_URL must point to a Neon database host ending in .neon.tech.');
+
+const pool = new Pool({ connectionString: databaseUrl, max: Number(process.env.PG_POOL_MAX || 5) });
+pool.on('error', error => console.error('Unexpected idle Neon database connection error:', error.message));
 
 async function initDb() {
   const sql = `

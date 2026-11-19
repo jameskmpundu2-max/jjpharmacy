@@ -7,11 +7,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const { timingSafeEqual } = require('node:crypto');
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const net = require('node:net');
-const { spawn } = require('node:child_process');
 const { Server } = require('socket.io');
 const { pool, initDb } = require('./db');
 
@@ -113,28 +108,6 @@ const branchPeers = () => {
       .map(peer => ({ name: clean(peer.name), url: peer.url.replace(/\/+$/, '') }))
       .filter(peer => ['http:', 'https:'].includes(new URL(peer.url).protocol));
   } catch { peers = []; }
-  if (process.env.LOCAL_BRANCH_PROVISIONING === 'true') {
-    const self = process.env.LOCAL_BRANCH_NAME || '';
-    if (self && process.env.LOCAL_MAIN_SITE_URL) peers.push({ name: process.env.LOCAL_MAIN_SITE_NAME || 'Main pharmacy', url: process.env.LOCAL_MAIN_SITE_URL.replace(/\/+$/, '') });
-    const directory = path.join(__dirname, '.branches');
-    try {
-      for (const id of fs.readdirSync(directory)) {
-        if (id === self) continue;
-        const branchDirectory = path.join(directory, id);
-        const metadataPath = path.join(branchDirectory, 'branch.json');
-        let metadata;
-        try { metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8')); }
-        catch {
-          const settingsPath = path.join(branchDirectory, '.env');
-          if (!fs.existsSync(settingsPath)) continue;
-          const settings = require('dotenv').parse(fs.readFileSync(settingsPath));
-          const label = id.split('-').map(word => word[0].toUpperCase() + word.slice(1)).join(' ');
-          metadata = { id, name: label, port: Number(settings.PORT || 3000) };
-        }
-        if (Number.isInteger(Number(metadata.port))) peers.push({ name: clean(metadata.name || id), url: `http://localhost:${Number(metadata.port)}` });
-      }
-    } catch {}
-  }
   return [...new Map(peers.map(peer => [peer.url.toLowerCase(), peer])).values()];
 };
 function validBranchToken(candidate) {
@@ -154,74 +127,10 @@ app.get('/api/internal/branch-stock', asyncRoute(async (req,res) => {
     ORDER BY name LIMIT 30`, [q]);
   res.json({ products: result.rows });
 }));
-function listLocalBranches() {
-  const directory = path.join(__dirname, '.branches');
-  if (!fs.existsSync(directory)) return [];
-  return fs.readdirSync(directory, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => {
-    const folder = path.join(directory, entry.name);
-    let metadata;
-    try { metadata = JSON.parse(fs.readFileSync(path.join(folder, 'branch.json'), 'utf8')); }
-    catch {
-      try {
-        const settings = require('dotenv').parse(fs.readFileSync(path.join(folder, '.env')));
-        metadata = { id: entry.name, name: entry.name.split('-').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), port: Number(settings.PORT || 3000) };
-      } catch { return null; }
-    }
-    const port = Number(metadata.port);
-    if (!Number.isInteger(port)) return null;
-    return { id: entry.name, name: clean(metadata.name || entry.name), url: `http://localhost:${port}`, databaseReady: fs.existsSync(path.join(folder, 'database')) };
-  }).filter(Boolean);
-}
-function portIsAvailable(port) {
-  return new Promise(resolve => {
-    const probe = net.createServer();
-    probe.once('error', () => resolve(false));
-    probe.listen(port, '127.0.0.1', () => probe.close(() => resolve(true)));
-  });
-}
 app.get('/api/branches', isAdmin, (req,res) => {
-  res.json({ enabled: process.env.LOCAL_BRANCH_PROVISIONING === 'true', branches: listLocalBranches() });
+  res.json({ enabled: false, branches: branchPeers().map((branch,index) => ({ id:String(index+1), name:branch.name, url:branch.url, databaseReady:true })) });
 });
-app.post('/api/branches', isAdmin, asyncRoute(async (req,res) => {
-  if (process.env.LOCAL_BRANCH_PROVISIONING !== 'true') return res.status(501).json({ error: 'Branch creation is available on the local host. Hosted branches need their own deployment and database.' });
-  const name = clean(req.body.name);
-  if (!/^[\p{L}\p{N}][\p{L}\p{N} &'’-]{1,59}$/u.test(name)) return res.status(400).json({ error: 'Enter a branch name using letters, numbers, spaces, ampersands, apostrophes, or hyphens.' });
-  const id = name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  if (!id) return res.status(400).json({ error: 'Branch name must include letters or numbers.' });
-  const folder = path.join(__dirname, '.branches', id);
-  if (fs.existsSync(folder)) return res.status(409).json({ error: 'A branch with this name already exists.' });
-  let port = null;
-  for (let candidate = Math.max(3001, Number(process.env.BRANCH_PORT_START || 3001)); candidate <= 3099; candidate++) {
-    const databasePort = 55432 + candidate - 3000;
-    if (await portIsAvailable(candidate) && await portIsAvailable(databasePort)) { port = candidate; break; }
-  }
-  if (!port) return res.status(503).json({ error: 'No free local branch ports are available (3001–3099).' });
-  const password = crypto.randomBytes(24).toString('base64url');
-  const branchProcess = spawn(process.execPath, [path.join(__dirname, 'start-local.js'), `--branch=${id}`, `--port=${port}`, `--name=${name}`], {
-    cwd: __dirname,
-    detached: true,
-    windowsHide: true,
-    stdio: 'ignore',
-    env: { ...process.env, LOCAL_BRANCH_PROVISIONING: 'true', BRANCH_INITIAL_ADMIN_PASSWORD: password }
-  });
-  branchProcess.unref();
-  const started = await new Promise(resolve => {
-    let settled = false;
-    let timer, timeout;
-    const finish = result => { if (!settled) { settled = true; clearInterval(timer); clearTimeout(timeout); resolve(result); } };
-    branchProcess.once('error', () => finish(false));
-    branchProcess.once('exit', () => finish(false));
-    timer = setInterval(async () => {
-      try {
-        const response = await fetch(`http://127.0.0.1:${port}/api/config`, { signal: AbortSignal.timeout(700) });
-        if (response.ok) finish(true);
-      } catch {}
-    }, 400);
-    timeout = setTimeout(() => finish(false), 15000);
-  });
-  if (!started) return res.status(503).json({ error: 'The branch setup started but did not become ready in time. Check the local branch folder and restart the host if needed.' });
-  res.status(201).json({ branch: { id, name, url: `http://localhost:${port}` }, admin: { email: process.env.ADMIN_EMAIL || 'admin@example.com', password } });
-}));
+app.post('/api/branches', isAdmin, (req,res) => res.status(501).json({ error: 'Automatic branch creation is not configured. Deploy each branch with its own Neon connection and add it to BRANCH_DIRECTORY.' }));
 app.get('/api/branch-availability', auth, asyncRoute(async (req,res) => {
   const term = clean(req.query.q).slice(0, 100);
   if (term.length < 2) return res.status(400).json({ error: 'Enter at least two characters to search other branches.' });
