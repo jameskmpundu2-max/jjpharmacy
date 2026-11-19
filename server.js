@@ -55,7 +55,7 @@ function receiptNo() {
 }
 
 app.get('/api/config', (req,res) => res.json({
-  pharmacyName: process.env.PHARMACY_NAME || 'My Pharmacy',
+  pharmacyName: process.env.PHARMACY_NAME || 'J&J Pharmacy',
   address: process.env.PHARMACY_ADDRESS || 'Lusaka, Zambia',
   phone: process.env.PHARMACY_PHONE || '',
   currency: process.env.CURRENCY || 'ZMW'
@@ -254,7 +254,7 @@ app.get('/api/purchases', isAdmin, asyncRoute(async(req,res)=>{
 async function saleReceiptPayload(client,sale,cashier){
   const detail=await client.query(`SELECT si.*,p.sku FROM sale_items si LEFT JOIN products p ON p.id=si.product_id WHERE si.sale_id=$1`,[sale.id]);
   return {sale,items:detail.rows,cashier,pharmacy:{
-    name:process.env.PHARMACY_NAME||'My Pharmacy',address:process.env.PHARMACY_ADDRESS||'Lusaka, Zambia',
+    name:process.env.PHARMACY_NAME||'J&J Pharmacy',address:process.env.PHARMACY_ADDRESS||'Lusaka, Zambia',
     phone:process.env.PHARMACY_PHONE||'',currency:process.env.CURRENCY||'ZMW'
   }};
 }
@@ -321,7 +321,7 @@ app.get('/api/sales/:id', auth, asyncRoute(async(req,res)=>{
   const r=await pool.query(`SELECT s.*,u.name cashier_name FROM sales s LEFT JOIN users u ON u.id=s.cashier_id WHERE s.id=$1`,[req.params.id]);
   if(!r.rowCount)return res.status(404).json({error:'Sale not found.'});
   const items=await pool.query('SELECT * FROM sale_items WHERE sale_id=$1',[req.params.id]);
-  res.json({sale:r.rows[0],items:items.rows,pharmacy:{name:process.env.PHARMACY_NAME||'My Pharmacy',address:process.env.PHARMACY_ADDRESS||'Lusaka, Zambia',phone:process.env.PHARMACY_PHONE||'',currency:process.env.CURRENCY||'ZMW'}});
+  res.json({sale:r.rows[0],items:items.rows,pharmacy:{name:process.env.PHARMACY_NAME||'J&J Pharmacy',address:process.env.PHARMACY_ADDRESS||'Lusaka, Zambia',phone:process.env.PHARMACY_PHONE||'',currency:process.env.CURRENCY||'ZMW'}});
 }));
 
 app.get('/api/movements', isAdmin, asyncRoute(async(req,res)=>{
